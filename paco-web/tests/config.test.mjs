@@ -1,0 +1,18 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {configFrom,publicConfig} from '../lib/config.mjs';
+test('config fails closed and never exposes server secret',()=>{
+ assert.equal(configFrom({}).ready,false);
+ const c=configFrom({SUPABASE_URL:'https://project.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_example',SUPABASE_SERVICE_ROLE_KEY:'secret'});
+ assert.equal(c.ready,true);assert.equal(JSON.stringify(publicConfig(c)).includes('secret'),false);
+ assert.equal(publicConfig(c).photosEnabled,true);
+});
+test('rejects secret used as public key, arbitrary upstream and remote HTTP origin',()=>{
+ for(const env of [
+ {SUPABASE_PUBLISHABLE_KEY:'sb_secret_nope'},
+ {SUPABASE_URL:'http://project.supabase.co'},
+ {SUPABASE_URL:'https://attacker.test'},
+ {APP_ORIGIN:'http://public.test'},
+ {PORT:'-1'}
+ ])assert.throws(()=>configFrom(env));
+});
+

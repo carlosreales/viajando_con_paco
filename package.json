@@ -1,0 +1,29 @@
+{
+  "name": "petlife-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p apps/api/tsconfig.json",
+    "typecheck": "tsc -p apps/api/tsconfig.json --noEmit",
+    "lint": "eslint apps/api/src apps/api/test",
+    "test": "pnpm build && node --test apps/api/dist/test/*.test.js",
+    "start": "node apps/api/dist/src/main.js",
+    "demo": "node apps/api/dist/src/demo.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/platform-express": "^11.1.0",
+    "pg": "^8.16.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

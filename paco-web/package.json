@@ -1,0 +1,21 @@
+{
+  "name": "paco-connected",
+  "version": "0.3.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check server.mjs && node --check src/app.js && node --check src/backend.js && node --check lib/photos.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "sharp": "^0.34.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "@electric-sql/pglite": "^0.3.0",
+    "jsdom": "^26.0.0"
+  }
+}

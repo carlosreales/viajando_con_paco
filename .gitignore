@@ -1,0 +1,11 @@
+node_modules/
+apps/api/dist/
+.env
+.env.*
+!.env.example
+.dart_tool/
+.flutter-plugins-dependencies
+build/
+coverage/
+*.log
+work/
