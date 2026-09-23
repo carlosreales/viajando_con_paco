@@ -1,7 +1,8 @@
 import {createBackend,message} from './backend.js';
-import {petError,today,ageLabel,escapeHtml as esc} from './domain.js';
+import {petError,today,ageLabel,vaccineError,vaccineReminder,escapeHtml as esc} from './domain.js';
+import {BREED_OTHER,breedsForSpecies} from './breeds.js';
 const app=document.querySelector('#app');
-const state={screen:'loading',tab:'home',user:null,pets:[],pet:null,memories:[],email:'',purpose:'signup',busy:false,error:'',notice:'',editing:false,petRequestId:null,memoryRequestId:null,lastSend:0,recovery:false};
+const state={screen:'loading',tab:'home',user:null,pets:[],pet:null,memories:[],vaccinations:[],email:'',purpose:'signup',busy:false,error:'',notice:'',editing:false,petRequestId:null,memoryRequestId:null,vaccineRequestId:null,vaccineEditing:null,lastSend:0,recovery:false};
 let api,config;
 const brand='<a href="/" class="brand" aria-label="Paco, inicio"><span class="paw" aria-hidden="true">✦</span>paco<span class="brand-dot">.</span></a>';
 const field=(name,label,type='text',value='',attrs='')=>'<label class="field"><span>'+label+'</span><input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
@@ -25,32 +26,49 @@ function auth(){
 }
 function petForm(){
  const p=state.editing?state.pet:null;
- return title('SU PERFIL',p?'Los detalles importan.':'¿Quién te acompaña?','Empieza por lo esencial. Podrás añadir su foto después.')+'<form id="pet">'+field('name','Nombre','text',p?.name||'','required maxlength="80"')+'<label class="field"><span>Especie</span><select name="species">'+[['DOG','Perro'],['CAT','Gato'],['OTHER','Otra']].map(([v,l])=>'<option value="'+v+'" '+(p?.species===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+field('birthDate','Fecha de nacimiento','date',p?.birth_date||'','required max="'+today()+'"')+'<label class="check"><input name="estimated" type="checkbox" '+(p?.estimated?'checked':'')+'>Es una fecha aproximada</label>'+field('breed','Raza (opcional)','text',p?.breed||'','maxlength="80"')+'<div class="two-fields">'+field('weight','Peso en kg (opcional)','number',p?.weight||'','min="0.1" max="120" step="0.1"')+'<label class="field"><span>Sexo</span><select name="gender">'+[['UNKNOWN','No lo sé'],['MALE','Macho'],['FEMALE','Hembra']].map(([v,l])=>'<option value="'+v+'" '+(p?.gender===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label></div>'+alerts()+submit('Guardar mascota')+'</form>'+(state.pets.length?'<button class="text-button" data-action="cancel-pet">Cancelar</button>':'');
+ const species=p?.species||'DOG';
+ return title('SU PERFIL',p?'Los detalles importan.':'¿Quién te acompaña?','Empieza por lo esencial. Podrás añadir su foto después.')+'<form id="pet">'+field('name','Nombre','text',p?.name||'','required maxlength="80"')+'<label class="field"><span>Especie</span><select name="species">'+[['DOG','Perro'],['CAT','Gato'],['OTHER','Otra']].map(([v,l])=>'<option value="'+v+'" '+(species===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+field('birthDate','Fecha de nacimiento','date',p?.birth_date||'','required max="'+today()+'"')+'<label class="check"><input name="estimated" type="checkbox" '+(p?.estimated?'checked':'')+'>Es una fecha aproximada</label><div id="breed-field">'+breedField(species,p?.breed||'')+'</div><div class="two-fields">'+field('weight','Peso en kg (opcional)','number',p?.weight||'','min="0.1" max="120" step="0.1"')+'<label class="field"><span>Sexo</span><select name="gender">'+[['UNKNOWN','No lo sé'],['MALE','Macho'],['FEMALE','Hembra']].map(([v,l])=>'<option value="'+v+'" '+(p?.gender===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label></div>'+alerts()+submit('Guardar mascota')+'</form>'+(state.pets.length?'<button class="text-button" data-action="cancel-pet">Cancelar</button>':'');
+}
+function breedField(species,current=''){
+ const breeds=breedsForSpecies(species);
+ if(!breeds.length)return field('breed','Raza o tipo (opcional)','text',current,'maxlength="80"');
+ const listed=breeds.includes(current),choice=listed?current:(current?BREED_OTHER:'');
+ return '<label class="field"><span>Raza (opcional)</span><select name="breed"><option value="">Selecciona una raza</option>'+breeds.map(b=>'<option value="'+esc(b)+'" '+(choice===b?'selected':'')+'>'+esc(b)+'</option>').join('')+'<option value="'+BREED_OTHER+'" '+(choice===BREED_OTHER?'selected':'')+'>Otra raza (escribir manualmente)</option></select></label><label class="field" data-custom-breed '+(choice===BREED_OTHER?'':'hidden')+'><span>Escribe la raza</span><input name="customBreed" type="text" value="'+esc(choice===BREED_OTHER?current:'')+'" maxlength="80" '+(choice===BREED_OTHER?'required':'')+'></label><p class="fine">Catálogo internacional · También puedes registrar cruces o razas no listadas.</p>';
 }
 function photoForm(kind,id,label){return '<form class="photo-form" data-kind="'+kind+'" data-id="'+id+'"><label class="field"><span>'+label+'</span><input aria-label="'+label+'" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required '+(!config.photosEnabled?'disabled':'')+'></label><button class="secondary" type="submit" '+(!config.photosEnabled?'disabled':'')+'>Guardar foto</button><p class="fine">JPEG, PNG o WebP · Máximo 8 MB · Foto privada</p><p class="photo-status notice" role="status">'+(!config.photosEnabled?'Falta configurar el servicio de fotografías.':'')+'</p></form>';}
 function home(){
  const p=state.pet;
- return '<div class="home-heading"><div>'+title('SU VIDA, CONTIGO','El mundo de '+esc(p.name)+'.')+'</div><button class="round-btn" data-action="edit" aria-label="Editar mascota">✎</button></div><section class="pet-hero"><div class="pet-details"><span class="private-pill">Tu compañero</span><h2>'+esc(p.name)+'</h2><p>'+esc(p.breed||({DOG:'Perro',CAT:'Gato',OTHER:'Mascota'}[p.species]))+'</p><span class="age-chip">'+esc(ageLabel(p.birth_date))+(p.estimated?' · aprox.':'')+'</span></div><img class="'+(p.photo?'pet-photo':'')+'" src="'+esc(p.photo||'/dog.svg')+'" alt="'+esc(p.photo?'Foto de '+p.name:'Ilustración provisional')+'"></section><div class="stats"><div><strong>'+state.memories.length+'</strong><span>recuerdos</span></div><div><strong>'+esc(p.weight?p.weight+' kg':'—')+'</strong><span>peso registrado</span></div><div><strong>♡</strong><span>vuestro espacio</span></div></div>'+photoForm('pet',p.id,p.photo_path?'Cambiar su fotografía':'Añadir su fotografía')+'<div class="journal-invite"><div><h3>¿Qué hizo especial el día de hoy?</h3><button class="inline-link" data-action="new-memory">Guardar un recuerdo →</button></div></div>';
+ const due=state.vaccinations.find(v=>['OVERDUE','DUE'].includes(vaccineReminder(v.next_due_on).kind));
+ const reminder=due?'<button class="vaccine-alert" data-tab="health"><span>✚</span><div><strong>'+esc(due.vaccine_name)+'</strong><small>'+esc(vaccineReminder(due.next_due_on).label)+' · Revisa su cartilla</small></div><b>Ver salud →</b></button>':'';
+ return '<div class="home-heading"><div>'+title('SU VIDA, CONTIGO','El mundo de '+esc(p.name)+'.')+'</div><button class="round-btn" data-action="edit" aria-label="Editar mascota">✎</button></div><section class="pet-hero"><div class="pet-details"><span class="private-pill">Tu compañero</span><h2>'+esc(p.name)+'</h2><p>'+esc(p.breed||({DOG:'Perro',CAT:'Gato',OTHER:'Mascota'}[p.species]))+'</p><span class="age-chip">'+esc(ageLabel(p.birth_date))+(p.estimated?' · aprox.':'')+'</span></div><img class="'+(p.photo?'pet-photo':'')+'" src="'+esc(p.photo||'/dog.svg')+'" alt="'+esc(p.photo?'Foto de '+p.name:'Ilustración provisional')+'"></section><div class="stats"><div><strong>'+state.memories.length+'</strong><span>recuerdos</span></div><div><strong>'+esc(p.weight?p.weight+' kg':'—')+'</strong><span>peso registrado</span></div><div><strong>♡</strong><span>vuestro espacio</span></div></div>'+reminder+photoForm('pet',p.id,p.photo_path?'Cambiar su fotografía':'Añadir su fotografía')+'<div class="journal-invite"><div><h3>¿Qué hizo especial el día de hoy?</h3><button class="inline-link" data-action="new-memory">Guardar un recuerdo →</button></div></div>';
 }
 function diary(){
  return title('LOS DÍAS QUE SE QUEDAN','Vuestro diario.','Los recuerdos de '+esc(state.pet.name)+', solo para ti.')+'<button class="primary" data-action="new-memory">Añadir recuerdo ↗</button>'+(state.memories.length?'<div class="timeline">'+state.memories.map(m=>'<article><p class="eyebrow accent">'+esc(m.event_date)+'</p><h2>'+esc(m.title)+'</h2>'+(m.photo?'<img class="memory-photo" src="'+esc(m.photo)+'" alt="'+esc(m.title)+'" loading="lazy">':m.photo_path?'<p class="notice">La foto no está disponible ahora. Actualiza para reintentar.</p>':'')+'<p>'+esc(m.note)+'</p><span class="private-label">Privado · '+esc(ageLabel(state.pet.birth_date,m.event_date))+'</span><details><summary>'+(m.photo_path?'Cambiar fotografía':'Añadir fotografía')+'</summary>'+photoForm('memory',m.id,'Foto del recuerdo')+'</details></article>').join('')+'</div>':'<div class="empty"><h2>Aquí empieza su historia.</h2><p>Guarda vuestro primer momento juntos.</p></div>');
 }
 function memoryForm(){return back('home')+title('UN MOMENTO VUESTRO','Que no se olvide.','Primero guardaremos el recuerdo. Después podrás añadir su fotografía.')+'<form id="memory">'+field('title','Título','text','','required maxlength="100"')+field('date','Fecha','date',today(),'required min="'+state.pet.birth_date+'" max="'+today()+'"')+'<label class="field"><span>Lo que quieres recordar</span><textarea name="note" rows="4" maxlength="1000"></textarea></label>'+alerts()+submit('Guardar recuerdo')+'</form>';}
+function health(){
+ const vaccines=state.vaccinations;
+ return title('CUIDAMOS SU SALUD','Vacunas de '+esc(state.pet.name)+'.','Registra su historial y consulta las próximas dosis.')+'<button class="primary" data-action="new-vaccine">Añadir vacuna ↗</button>'+(vaccines.length?'<div class="vaccine-list">'+vaccines.map(v=>{const status=vaccineReminder(v.next_due_on);return '<article class="vaccine-card"><div><p class="eyebrow accent">'+esc(v.administered_on)+'</p><h2>'+esc(v.vaccine_name)+'</h2>'+(v.next_due_on?'<p class="vaccine-date">Próxima dosis: '+esc(v.next_due_on)+'</p>':'<p class="vaccine-date">Sin próxima dosis registrada</p>')+(v.notes?'<p class="vaccine-note">'+esc(v.notes)+'</p>':'')+'</div><div class="vaccine-actions">'+(status.kind!=='NONE'?'<span class="vaccine-status '+status.kind.toLowerCase()+'">'+esc(status.label)+'</span>':'')+'<button class="text-button" data-action="edit-vaccine" data-vaccine="'+v.id+'">Editar</button><button class="text-button danger" data-action="delete-vaccine" data-vaccine="'+v.id+'">Eliminar</button></div></article>';}).join('')+'</div>':'<div class="empty"><h2>Su cartilla empieza aquí.</h2><p>Registra la primera vacuna cuando la tengas a mano.</p></div>');
+}
+function vaccineForm(){
+ const v=state.vaccineEditing;
+ return back('home')+title('SU CARTILLA',v?'Edita esta vacuna.':'Añade una vacuna.','Guarda solo datos confirmados por su veterinario o su cartilla.')+'<form id="vaccine">'+field('vaccineName','Nombre de la vacuna','text',v?.vaccine_name||'','required maxlength="100"')+field('administeredOn','Fecha de aplicación','date',v?.administered_on||today(),'required min="'+state.pet.birth_date+'" max="'+today()+'"')+field('nextDueOn','Próxima dosis (opcional)','date',v?.next_due_on||'','min="'+state.pet.birth_date+'"')+'<label class="field"><span>Notas (opcional)</span><textarea name="notes" rows="4" maxlength="1000">'+esc(v?.notes||'')+'</textarea></label>'+alerts()+submit(v?'Guardar cambios':'Guardar vacuna')+'</form>';
+}
 function settings(){return title('A TU MANERA','Tu espacio.')+'<div class="settings-row"><span>Cuenta</span><strong>'+esc(state.user.email)+'</strong></div><p class="info-note">Tus datos se guardan en tu cuenta. Las fotos son privadas. Cerrar sesión elimina los datos de la pantalla, pero conserva tus recuerdos en la base de datos.</p><button class="secondary" data-action="export">Exportar mis datos</button><button class="secondary" data-action="logout">Cerrar sesión en todos mis dispositivos</button><p class="fine">Beta privada. Fotos HEIC, suscripciones, notificaciones y aplicaciones nativas aún no incluidas.</p>';}
 function shell(content){
- return '<div class="product-shell"><header class="product-header">'+brand+'<span class="demo-badge">BETA</span></header><main class="product-main">'+(state.pets.length&&state.screen==='home'?'<label class="field pet-selector"><span>Tu mascota</span><select id="pet-selector">'+state.pets.map(p=>'<option value="'+p.id+'" '+(p.id===state.pet?.id?'selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label><button class="text-button" data-action="new-pet">Añadir otra mascota</button>':'')+content+(state.screen==='home'?alerts():'')+'</main>'+(state.screen==='home'?'<nav class="bottom-nav" aria-label="Navegación">'+[['home','⌂','Mascota'],['diary','▤','Diario'],['settings','☷','Ajustes']].map(([tab,icon,label])=>'<button data-tab="'+tab+'" '+(state.tab===tab?'aria-current="page"':'')+'><span aria-hidden="true">'+icon+'</span>'+label+'</button>').join('')+'</nav>':'')+'</div>';
+ return '<div class="product-shell"><header class="product-header">'+brand+'<span class="demo-badge">BETA</span></header><main class="product-main">'+(state.pets.length&&state.screen==='home'?'<label class="field pet-selector"><span>Tu mascota</span><select id="pet-selector">'+state.pets.map(p=>'<option value="'+p.id+'" '+(p.id===state.pet?.id?'selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label><button class="text-button" data-action="new-pet">Añadir otra mascota</button>':'')+content+(state.screen==='home'?alerts():'')+'</main>'+(state.screen==='home'?'<nav class="bottom-nav" aria-label="Navegación">'+[['home','⌂','Mascota'],['diary','▤','Diario'],['health','✚','Salud'],['settings','☷','Ajustes']].map(([tab,icon,label])=>'<button data-tab="'+tab+'" '+(state.tab===tab?'aria-current="page"':'')+'><span aria-hidden="true">'+icon+'</span>'+label+'</button>').join('')+'</nav>':'')+'</div>';
 }
 function render(){
  if(state.screen==='setup'){app.innerHTML=setup();return;}
  if(state.screen==='loading'){app.innerHTML=authLayout(title('UN MOMENTO','Preparando su espacio…'));return;}
  if(state.screen==='load-error'){app.innerHTML=authLayout(title('VOLVAMOS A INTENTARLO','No pudimos cargar tus datos.')+alerts()+'<button class="primary" data-action="refresh">Reintentar</button><button class="secondary" data-action="logout">Cerrar sesión</button>');return;}
- const content=state.screen==='onboarding'?petForm():state.screen==='memory'?memoryForm():state.screen==='home'?({home,diary,settings}[state.tab])():null;
+ const content=state.screen==='onboarding'?petForm():state.screen==='memory'?memoryForm():state.screen==='vaccine'?vaccineForm():state.screen==='home'?({home,diary,health,settings}[state.tab])():null;
  app.innerHTML=content?shell(content):auth();
  document.querySelector('h1')?.focus({preventScroll:true});
 }
 function showError(error,text){state.error=text||message(error);const e=document.querySelector('#error');if(e){e.textContent=state.error;e.hidden=false;}else render();}
 function go(screen){state.error='';state.notice='';state.screen=screen;render();window.scrollTo(0,0);}
-function clearPrivate(){state.user=null;state.pets=[];state.pet=null;state.memories=[];state.email='';state.recovery=false;}
+function clearPrivate(){state.user=null;state.pets=[];state.pet=null;state.memories=[];state.vaccinations=[];state.email='';state.recovery=false;}
 async function load(){
  const user=await api.user();if(!user){clearPrivate();go('login');return;}
  state.user=user;state.screen='loading';render();
@@ -67,10 +85,10 @@ async function load(){
 async function loadPet(){
  const userId=state.user?.id,pet=state.pet;
  if(!pet)return;
- const [memories,photo]=await Promise.all([api.memories(pet.id),api.signedPhoto(pet.photo_path)]);
+ const [memories,vaccinations,photo]=await Promise.all([api.memories(pet.id),api.vaccinations(pet.id),api.signedPhoto(pet.photo_path)]);
  const enriched=await Promise.all(memories.map(async m=>({...m,photo:await api.signedPhoto(m.photo_path)})));
  if(state.user?.id!==userId||state.pet?.id!==pet.id)return;
- state.pet={...pet,photo};state.memories=enriched;state.screen='home';state.error='';render();
+ state.pet={...pet,photo};state.memories=enriched;state.vaccinations=vaccinations;state.screen='home';state.error='';render();
 }
 async function busy(form,work){
  if(state.busy)return;state.busy=true;form?.setAttribute('aria-busy','true');
@@ -98,12 +116,16 @@ app.addEventListener('submit',event=>{
    await api.reset(String(data.get('password')));form.reset();clearPrivate();go('login');state.notice='Contraseña actualizada. Inicia sesión de nuevo.';render();
   }
   if(form.id==='pet'){
-   const p=Object.fromEntries(data);p.estimated=data.has('estimated');const error=petError(p);if(error){showError(null,error);return;}
+   const p=Object.fromEntries(data);p.estimated=data.has('estimated');if(p.breed===BREED_OTHER)p.breed=String(p.customBreed||'').trim();delete p.customBreed;const error=petError(p);if(error){showError(null,error);return;}
    const record=await api.savePet(p,state.petRequestId,state.editing);state.pet=record;state.tab='home';await load();
   }
   if(form.id==='memory'){
    const m=Object.fromEntries(data);if(!m.title.trim()){showError(null,'Escribe un título.');return;}
    await api.saveMemory({...m,petId:state.pet.id},state.memoryRequestId);state.tab='diary';await loadPet();state.notice='Recuerdo guardado. Puedes añadirle una fotografía.';render();
+  }
+  if(form.id==='vaccine'){
+   const v=Object.fromEntries(data),error=vaccineError(v,state.pet.birth_date);if(error){showError(null,error);return;}
+   await api.saveVaccination({...v,petId:state.pet.id},state.vaccineRequestId,Boolean(state.vaccineEditing));state.vaccineEditing=null;state.tab='health';await loadPet();state.notice='Vacuna guardada.';render();
   }
  });
 });
@@ -122,6 +144,16 @@ app.addEventListener('click',event=>{
    case 'edit':state.editing=true;state.petRequestId=state.pet.id;go('onboarding');break;
    case 'cancel-pet':go('home');break;
    case 'new-memory':state.memoryRequestId=crypto.randomUUID();go('memory');break;
+   case 'new-vaccine':state.vaccineEditing=null;state.vaccineRequestId=crypto.randomUUID();go('vaccine');break;
+   case 'edit-vaccine':{
+    const vaccine=state.vaccinations.find(v=>v.id===b.dataset.vaccine);if(!vaccine){showError(null,'No encontramos esa vacuna. Actualiza e inténtalo de nuevo.');return;}
+    state.vaccineEditing=vaccine;state.vaccineRequestId=vaccine.id;go('vaccine');break;
+   }
+   case 'delete-vaccine':{
+    const vaccine=state.vaccinations.find(v=>v.id===b.dataset.vaccine);if(!vaccine){showError(null,'No encontramos esa vacuna. Actualiza e inténtalo de nuevo.');return;}
+    if(!window.confirm('¿Eliminar '+vaccine.vaccine_name+' de su cartilla?'))return;
+    await api.deleteVaccination(vaccine.id);await loadPet();state.notice='Vacuna eliminada.';render();break;
+   }
    case 'export':{
     const pets=await api.pets();const items=await Promise.all(pets.map(async p=>({pet:p,memories:await api.memories(p.id)})));
     const url=URL.createObjectURL(new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),items},null,2)],{type:'application/json'}));
@@ -130,7 +162,14 @@ app.addEventListener('click',event=>{
   }
  });
 });
-app.addEventListener('change',event=>{if(event.target.id==='pet-selector'){const id=event.target.value;busy(null,async()=>{state.pet=state.pets.find(p=>p.id===id);await loadPet();});}});
+app.addEventListener('change',event=>{
+ if(event.target.id==='pet-selector'){const id=event.target.value;busy(null,async()=>{state.pet=state.pets.find(p=>p.id===id);await loadPet();});return;}
+ if(event.target.name==='species'){document.querySelector('#breed-field').innerHTML=breedField(event.target.value);return;}
+ if(event.target.name==='breed'){
+  const custom=document.querySelector('[data-custom-breed]');if(!custom)return;
+  const enabled=event.target.value===BREED_OTHER;custom.hidden=!enabled;const input=custom.querySelector('input');input.required=enabled;if(!enabled)input.value='';
+ }
+});
 async function start(){
  try{
   const response=await fetch('/api/config');if(!response.ok)throw Error();config=await response.json();

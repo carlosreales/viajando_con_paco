@@ -9,6 +9,7 @@ test('PostgreSQL: RLS, ownership, quotas, dates and protected columns',async()=>
  try{
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY); CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$; GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role; GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated,anon;`);
   await db.exec(await readFile(new URL('../supabase/001_schema.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/003_vaccinations.sql',import.meta.url),'utf8'));
   await db.exec(`INSERT INTO auth.users VALUES('${a}'),('${b}');`);
   async function as(id,sql){await db.exec(`SET ROLE authenticated; SELECT set_config('request.jwt.claim.sub','${id}',false);`);try{return await db.query(sql);}finally{await db.exec('RESET ROLE');}}
   await as(a,`INSERT INTO paco_pets(id,name,species,birth_date) VALUES('${pet}','Paco','DOG','2023-01-01')`);
@@ -27,6 +28,20 @@ test('PostgreSQL: RLS, ownership, quotas, dates and protected columns',async()=>
   await assert.rejects(as(b,`INSERT INTO paco_memories(pet_id,title,event_date) VALUES('${pet}','Intruder','2024-01-01')`),/PACO_NOT_FOUND/);
   await assert.rejects(as(a,`INSERT INTO paco_memories(pet_id,title,event_date) VALUES('${pet}','Too early','2022-01-01')`),/PACO_INVALID_DATE/);
   await as(a,`INSERT INTO paco_memories(id,pet_id,title,event_date) VALUES('${memory}','${pet}','First walk','2024-01-01')`);
+  const vaccine='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  await as(a,`INSERT INTO paco_vaccinations(id,pet_id,vaccine_name,administered_on,next_due_on,notes) VALUES('${vaccine}','${pet}','Rabia','2024-02-01','2025-02-01','Anual')`);
+  assert.equal((await as(a,'SELECT * FROM paco_vaccinations')).rows.length,1);
+  assert.equal((await as(b,'SELECT * FROM paco_vaccinations')).rows.length,0);
+  await assert.rejects(as(b,`INSERT INTO paco_vaccinations(pet_id,vaccine_name,administered_on) VALUES('${pet}','Ajena','2024-02-01')`),/PACO_NOT_FOUND/);
+  assert.equal((await as(b,`UPDATE paco_vaccinations SET vaccine_name='Ajena' WHERE id='${vaccine}' RETURNING id`)).rows.length,0);
+  assert.equal((await as(a,`SELECT vaccine_name FROM paco_vaccinations WHERE id='${vaccine}'`)).rows[0].vaccine_name,'Rabia');
+  await assert.rejects(as(a,`INSERT INTO paco_vaccinations(pet_id,vaccine_name,administered_on) VALUES('${pet}','Antes','2022-01-01')`),/PACO_INVALID_VACCINATION_DATE/);
+  await assert.rejects(as(a,`INSERT INTO paco_vaccinations(pet_id,vaccine_name,administered_on) VALUES('${pet}','Futura',CURRENT_DATE+1)`),/PACO_INVALID_VACCINATION_DATE/);
+  await assert.rejects(as(a,`INSERT INTO paco_vaccinations(pet_id,vaccine_name,administered_on,next_due_on) VALUES('${pet}','Orden','2024-02-01','2024-01-01')`),/check constraint|PACO_INVALID_VACCINATION_DUE_DATE/);
+  await as(a,`UPDATE paco_vaccinations SET next_due_on='2025-03-01' WHERE id='${vaccine}'`);
+  assert.equal((await as(a,`SELECT next_due_on::text AS next_due_on FROM paco_vaccinations WHERE id='${vaccine}'`)).rows[0].next_due_on,'2025-03-01');
+  await as(a,`DELETE FROM paco_vaccinations WHERE id='${vaccine}'`);
+  assert.equal((await as(a,'SELECT * FROM paco_vaccinations')).rows.length,0);
   assert.equal((await as(b,'SELECT * FROM paco_memories')).rows.length,0);
   await assert.rejects(as(a,`UPDATE paco_pets SET birth_date='2025-01-01' WHERE id='${pet}'`),/PACO_BIRTH_AFTER_MEMORY/);
   await db.exec(`UPDATE paco_profiles SET max_memories=1 WHERE user_id='${a}'`);

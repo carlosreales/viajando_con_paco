@@ -9,6 +9,7 @@ export function today() {
 export function petError(p,now=today()) {
  if(!p.name?.trim()||p.name.trim().length>80)return 'Escribe su nombre (máximo 80 caracteres).';
  if(!['DOG','CAT','OTHER'].includes(p.species))return 'Selecciona una especie.';
+ if((p.breed||'').length>80)return 'La raza no puede superar 80 caracteres.';
  const oldest=String(Number(now.slice(0,4))-40)+now.slice(4);
  if(!dateValid(p.birthDate)||p.birthDate>now||p.birthDate<oldest)return 'Elige una fecha válida entre hoy y hace 40 años.';
  if(p.weight&&(!Number.isFinite(Number(p.weight))||Number(p.weight)<0.1||Number(p.weight)>120))return 'El peso debe estar entre 0,1 y 120 kg.';
@@ -28,6 +29,21 @@ export function ageLabel(birth,now=today()) {
 export function codeError(code,expires,now=Date.now()) {
  if(now>=expires)return 'Este código ha caducado. Solicita uno nuevo.';
  return code==='123456'?'':'El código no coincide. Prueba con 123456.';
+}
+export function vaccineError(v,birthDate,now=today()) {
+ if(!v.vaccineName?.trim()||v.vaccineName.trim().length>100)return 'Escribe el nombre de la vacuna (máximo 100 caracteres).';
+ if(!dateValid(v.administeredOn)||v.administeredOn<birthDate||v.administeredOn>now)return 'La fecha de aplicación debe estar entre su nacimiento y hoy.';
+ if(v.nextDueOn&&(!dateValid(v.nextDueOn)||v.nextDueOn<v.administeredOn))return 'La próxima dosis no puede ser anterior a la aplicación.';
+ if((v.notes||'').length>1000)return 'Las notas no pueden superar 1.000 caracteres.';
+ return '';
+}
+export function vaccineReminder(nextDueOn,now=today()) {
+ if(!dateValid(nextDueOn))return {kind:'NONE',label:''};
+ const days=Math.floor((Date.parse(nextDueOn+'T00:00:00Z')-Date.parse(now+'T00:00:00Z'))/86400000);
+ if(days<0)return {kind:'OVERDUE',label:'Vencida'};
+ if(days===0)return {kind:'DUE',label:'Vence hoy'};
+ if(days<=30)return {kind:'DUE',label:'Vence en '+days+' '+(days===1?'día':'días')};
+ return {kind:'UPCOMING',label:'Próxima: '+nextDueOn};
 }
 export function escapeHtml(v) { return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
