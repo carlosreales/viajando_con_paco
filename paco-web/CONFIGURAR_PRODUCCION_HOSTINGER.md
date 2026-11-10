@@ -24,6 +24,7 @@ En **Authentication → URL Configuration** configura:
 - **Site URL:** `https://tu-dominio.example`
 - **Redirect URLs:** `https://tu-dominio.example`
 - Conserva `http://127.0.0.1:4174` sólo para desarrollo local.
+- En **Supabase > Authentication > URL Configuration**, configura **Site URL** como `https://viajandoconpaco.com` y añade exactamente `https://viajandoconpaco.com` a **Redirect URLs**. Puedes conservar `http://127.0.0.1:4174` sólo para probar localmente. Sin esa lista permitida, Supabase ignora o rechaza el destino de los correos de recuperación.
 
 Usa el dominio exacto de producción. Supabase usa estas direcciones para confirmación de correo y restablecimiento de contraseña.
 

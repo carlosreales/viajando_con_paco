@@ -14,6 +14,7 @@ export function message(error){
  return 'No se pudo completar la operación. Revisa tu conexión e inténtalo de nuevo.';
 }
 function checked(result){if(result.error)throw result.error;return result.data;}
+function authRedirect(config){return config.authRedirectTo||config.origin;}
 export function createBackend(config,injected,createClient){
  if(!injected&&typeof createClient!=='function')throw Error('SUPABASE_CLIENT_UNAVAILABLE');
  const client=injected||createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
@@ -22,13 +23,13 @@ export function createBackend(config,injected,createClient){
   async user(){const {data,error}=await client.auth.getUser();return error?null:data.user;},
   async login(email,password){return checked(await client.auth.signInWithPassword({email,password}));},
   async register(email,password){
-   const result=await client.auth.signUp({email,password,options:{emailRedirectTo:config.origin}});
+   const result=await client.auth.signUp({email,password,options:{emailRedirectTo:authRedirect(config)}});
    if(result.data?.session){await client.auth.signOut();throw Error('EMAIL_CONFIRMATION_REQUIRED');}
    return checked(result);
   },
   async verify(email,token,purpose){return checked(await client.auth.verifyOtp({email,token,type:purpose==='recovery'?'recovery':'signup'}));},
-  async recover(email){return checked(await client.auth.resetPasswordForEmail(email,{redirectTo:config.origin}));},
-  async resend(email,purpose){return purpose==='recovery'?checked(await client.auth.resetPasswordForEmail(email,{redirectTo:config.origin})):checked(await client.auth.resend({type:'signup',email,options:{emailRedirectTo:config.origin}}));},
+  async recover(email){return checked(await client.auth.resetPasswordForEmail(email,{redirectTo:authRedirect(config)}));},
+  async resend(email,purpose){return purpose==='recovery'?checked(await client.auth.resetPasswordForEmail(email,{redirectTo:authRedirect(config)})):checked(await client.auth.resend({type:'signup',email,options:{emailRedirectTo:authRedirect(config)}}));},
   async reset(password){checked(await client.auth.updateUser({password}));checked(await client.auth.signOut({scope:'global'}));},
   async logout(){checked(await client.auth.signOut({scope:'global'}));},
   async pets(){return checked(await client.from('paco_pets').select('*').order('created_at'));},

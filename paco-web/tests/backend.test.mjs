@@ -16,4 +16,16 @@ test('Registration refuses unverified auto-login configuration',async()=>{
  const api=createBackend({}, {auth:{signUp:async()=>({data:{session:{}},error:null}),signOut:async()=>{out=true;return {};}}});
  await assert.rejects(api.register('a@example.com','password-123'),/EMAIL_CONFIRMATION_REQUIRED/);assert.equal(out,true);
 });
+test('Authentication emails return to the verified browser origin when it is supplied',async()=>{
+ const calls=[];const auth={
+  signUp:async value=>{calls.push(['signUp',value]);return {data:{},error:null};},
+  resetPasswordForEmail:async (...value)=>{calls.push(['resetPasswordForEmail',...value]);return {data:{},error:null};},
+  resend:async value=>{calls.push(['resend',value]);return {data:{},error:null};}
+ };
+ const api=createBackend({origin:'http://127.0.0.1:4174',authRedirectTo:'https://viajandoconpaco.com'}, {auth});
+ await api.register('a@example.com','password-123');await api.recover('a@example.com');await api.resend('a@example.com','recovery');
+ assert.equal(calls[0][1].options.emailRedirectTo,'https://viajandoconpaco.com');
+ assert.equal(calls[1][2].redirectTo,'https://viajandoconpaco.com');
+ assert.equal(calls[2][2].redirectTo,'https://viajandoconpaco.com');
+});
 

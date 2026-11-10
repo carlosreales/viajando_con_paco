@@ -4,6 +4,14 @@ import {BREED_OTHER,breedsForSpecies} from './breeds.js';
 const app=document.querySelector('#app');
 const state={screen:'loading',tab:'home',user:null,pets:[],pet:null,memories:[],vaccinations:[],email:'',purpose:'signup',busy:false,error:'',notice:'',editing:false,petRequestId:null,memoryRequestId:null,vaccineRequestId:null,vaccineEditing:null,lastSend:0,recovery:false};
 let api,config;
+function authRedirectOrigin(fallback){
+ try{
+  const origin=new URL(window.location.origin).origin;
+  const url=new URL(origin);
+  const local=['127.0.0.1','localhost','[::1]'].includes(url.hostname);
+  return url.protocol==='https:'||(url.protocol==='http:'&&local)?origin:fallback;
+ }catch{return fallback;}
+}
 const brand='<a href="/" class="brand" aria-label="Paco dejando huella, inicio"><img class="brand-mark" src="/paco-mark.svg" alt=""><span class="brand-copy"><strong>Paco</strong><small>dejando huella</small></span></a>';
 const field=(name,label,type='text',value='',attrs='')=>'<label class="field"><span>'+label+'</span><input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
 const password=(name,label)=>field(name,label,'password','','required minlength="10" autocomplete="'+(state.screen==='login'?'current-password':'new-password')+'"')+'<button type="button" class="text-button align-right" data-show="'+name+'">Mostrar contraseña</button>';
@@ -173,6 +181,7 @@ app.addEventListener('change',event=>{
 async function start(){
  try{
   const response=await fetch('/api/config');if(!response.ok)throw Error();config=await response.json();
+  config.authRedirectTo=authRedirectOrigin(config.origin);
   if(!config.configured){state.screen='setup';render();return;}
   // This browser-only import keeps server credentials and the Node dependency out of the client bundle.
   const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2.116.0');
