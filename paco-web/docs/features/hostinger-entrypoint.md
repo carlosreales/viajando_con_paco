@@ -6,7 +6,7 @@ Objetivo y resultado observable: Hostinger debe detectar una llamada a `listen()
 
 Fuente y comportamiento actual: registro de Hostinger del 10 de noviembre de 2026: la aplicación no llamó a `listen()` en tres segundos porque `server.mjs` protegía el arranque mediante una comprobación de módulo principal.
 
-Alcance: se añade `hostinger.mjs`, que llama directamente a `startServer()`. Se conserva `server.mjs` importable para pruebas y ejecución local.
+Alcance: `server.mjs` inicia el servicio cuando el proceso no es el ejecutor de pruebas de Node. `hostinger.mjs` lo importa como entrada compatible. Se conserva la posibilidad de importar el servidor durante pruebas.
 
 RF-01: el archivo configurado como entrada en Hostinger debe iniciar el servidor sin una guarda de módulo principal.
 
@@ -16,4 +16,4 @@ Riesgo R-01: Hostinger carga el módulo de entrada de forma distinta a `node ser
 
 Preparada para implementar: sí; el registro determina la causa y no afecta datos ni permisos.
 
-Trazabilidad: RF-01/CA-01/R-01 | `hostinger.mjs`, `server.mjs` | `node --check hostinger.mjs`; producción pendiente de redeploy.
+Trazabilidad: RF-01/CA-01/R-01 | `hostinger.mjs`, `server.mjs` | `node --check hostinger.mjs`, pruebas Node; producción pendiente de redeploy.

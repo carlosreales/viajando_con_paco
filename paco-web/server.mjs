@@ -71,7 +71,7 @@ export function startServer(env=process.env){
  server.listen(config.port,config.host,()=>console.log('Paco: '+config.origin+' — '+(config.ready?'Supabase configurado':'Pendiente de configuración')));
  return server;
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+if(!process.env.NODE_TEST_CONTEXT){
  try{startServer();}
  catch{console.error('Configuración inválida. Revisa .env y CONFIGURAR.md.');process.exitCode=1;}
 }
