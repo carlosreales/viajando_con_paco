@@ -64,8 +64,15 @@ export function createServer(config){
   }
  });
 }
+export function startServer(env=process.env){
+ const config=configFrom(env),server=createServer(config);
+ server.requestTimeout=30000;server.headersTimeout=15000;
+ server.on('error',error=>console.error('SERVER_LISTEN_FAILED',error.code||'UNKNOWN'));
+ server.listen(config.port,config.host,()=>console.log('Paco: '+config.origin+' — '+(config.ready?'Supabase configurado':'Pendiente de configuración')));
+ return server;
+}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- try{const config=configFrom(process.env);const server=createServer(config);server.requestTimeout=30000;server.headersTimeout=15000;server.listen(config.port,config.host,()=>console.log('Paco: '+config.origin+' — '+(config.ready?'Supabase configurado':'Pendiente de configuración')));}
+ try{startServer();}
  catch{console.error('Configuración inválida. Revisa .env y CONFIGURAR.md.');process.exitCode=1;}
 }
 

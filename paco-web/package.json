@@ -5,9 +5,9 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build.mjs",
-    "start": "node --env-file-if-exists=.env server.mjs",
+    "start": "node --env-file-if-exists=.env hostinger.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check server.mjs && node --check src/app.js && node --check src/backend.js && node --check lib/photos.mjs"
+    "check": "node --check server.mjs && node --check hostinger.mjs && node --check src/app.js && node --check src/backend.js && node --check lib/photos.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",

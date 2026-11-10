@@ -20,6 +20,8 @@ RF-01: el servidor debe usar `HOST` para permitir que el proxy de Hostinger lleg
 
 RF-02: `GET /api/health` debe responder `200` con `{"status":"ok"}` y no revelar configuración.
 
+RF-03: el archivo de entrada de Hostinger debe llamar a `listen()` sin depender de si el cargador lo considera módulo principal.
+
 RNF-01: secretos | nunca aparecen en la configuración pública, documentación de ejemplo ni registro de la aplicación | verificación con pruebas de configuración y revisión de archivos.
 
 Flujo principal: Hostinger obtiene el repositorio, instala dependencias, ejecuta `npm run build`, inicia `npm start` con variables del panel y enruta HTTPS al proceso. El navegador carga la aplicación y usa el mismo origen configurado para fotos.
@@ -40,6 +42,6 @@ Decisiones y supuestos con procedencia: se usa `HOST=0.0.0.0` exclusivamente en 
 
 Preparada para implementar: sí; no cambia reglas de negocio ni autorización.
 
-Trazabilidad: RF-01/CA-01 | `lib/config.mjs`, `server.mjs` | `tests/config.test.mjs`, `tests/server.test.mjs`; RF-02/CA-02 | `server.mjs` | `tests/server.test.mjs`; RNF-01/R-01 | `.env.example`, `CONFIGURAR_PRODUCCION_HOSTINGER.md` | pruebas de configuración y revisión.
+Trazabilidad: RF-01/CA-01 | `lib/config.mjs`, `server.mjs` | `tests/config.test.mjs`, `tests/server.test.mjs`; RF-02/CA-02 | `server.mjs` | `tests/server.test.mjs`; RF-03 | `hostinger.mjs`, `server.mjs` | comprobación sintáctica; RNF-01/R-01 | `.env.example`, `CONFIGURAR_PRODUCCION_HOSTINGER.md` | pruebas de configuración y revisión.
 
 Verificación: `node --test tests/*.test.mjs` (14 pruebas correctas), comprobaciones sintácticas de los módulos del servidor y `node scripts/build.mjs` (correcto). El despliegue real, el dominio y las URLs de redirección quedan pendientes porque requieren acceso al panel de Hostinger y el dominio definitivo.

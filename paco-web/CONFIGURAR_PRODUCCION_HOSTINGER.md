@@ -1,6 +1,6 @@
 # Publicar Paco dejando huella en Hostinger
 
-Esta aplicación requiere un plan de Hostinger con aplicaciones Node.js: Business Web Hosting o Cloud. En el panel, usa **Websites → Add Website → Deploy Web App** e importa el repositorio de GitHub. Selecciona el tipo **Other**, Node.js 22.x, rama `main`, comando de construcción `npm run build` y comando de inicio `npm start`.
+Esta aplicación requiere un plan de Hostinger con aplicaciones Node.js: Business Web Hosting o Cloud. En el panel, usa **Websites → Add Website → Deploy Web App** e importa el repositorio de GitHub. Selecciona el tipo **Other**, Node.js 22.x, rama `main`, comando de construcción `npm run build` y comando de inicio `npm start`. Si Hostinger pide un archivo de entrada, usa `hostinger.mjs`.
 
 ## Variables de entorno
 
