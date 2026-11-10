@@ -20,4 +20,8 @@ test('accepts the Hostinger bind address and platform-assigned port',()=>{
  const config=configFrom({HOST:'0.0.0.0',PORT:'8080',APP_ORIGIN:'https://paco.example.com'});
  assert.equal(config.host,'0.0.0.0');assert.equal(config.port,8080);
 });
+test('uses Hostinger’s production port when PORT is not configured',()=>{
+ assert.equal(configFrom({NODE_ENV:'production'}).port,3000);
+ assert.equal(configFrom({}).port,4174);
+});
 

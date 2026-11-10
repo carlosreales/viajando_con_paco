@@ -8,7 +8,7 @@ En el panel de Hostinger, añade estas variables; no subas un archivo `.env` ni 
 
 | Variable | Valor de producción |
 | --- | --- |
-| `PORT` | El puerto que asigne Hostinger. Si ya lo crea el panel, no lo reemplaces. |
+| `PORT` | `3000`. También es el valor predeterminado del servidor en producción. |
 | `HOST` | `0.0.0.0` |
 | `APP_ORIGIN` | `https://tu-dominio.example` sin `/` final |
 | `SUPABASE_URL` | URL HTTPS pública del proyecto Supabase |

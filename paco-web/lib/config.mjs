@@ -1,5 +1,6 @@
 export function configFrom(env){
- const port=Number(env.PORT||4174);
+ const defaultPort=env.NODE_ENV==='production'?3000:4174;
+ const port=Number(env.PORT||defaultPort);
  if(!Number.isInteger(port)||port<1||port>65535)throw Error('INVALID_PORT');
  const host=env.HOST||'127.0.0.1';
  if(!['127.0.0.1','localhost','0.0.0.0'].includes(host))throw Error('INVALID_HOST');

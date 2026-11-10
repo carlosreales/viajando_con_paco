@@ -16,7 +16,7 @@ Actores y recursos: visitante anónimo (lee estáticos y salud); usuario autenti
 | Usuario autenticado | Cargar foto | Recursos propios | Origen igual a `APP_ORIGIN` y token válido | 401, 403 o 404 sin escribir datos |
 | Hostinger | Iniciar servidor | Proceso Node.js | `PORT`, `HOST=0.0.0.0` y variables válidas | Inicio aborta ante configuración inválida |
 
-RF-01: el servidor debe usar `HOST` para permitir que el proxy de Hostinger llegue al proceso, admitiendo solamente valores explícitos para desarrollo o producción.
+RF-01: el servidor debe usar `HOST` para permitir que el proxy de Hostinger llegue al proceso, admitiendo solamente valores explícitos para desarrollo o producción. Si `NODE_ENV=production` y `PORT` no está definido, debe usar el puerto `3000` esperado por Hostinger.
 
 RF-02: `GET /api/health` debe responder `200` con `{"status":"ok"}` y no revelar configuración.
 
