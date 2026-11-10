@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {createClient} from 'file:///C:/Users/Carlos%20Reales/Documents/Codex/2026-09-13/qu/outputs/Paco/real/node_modules/.pnpm/@supabase+supabase-js@2.116.0/node_modules/@supabase/supabase-js/dist/index.mjs';
+import {createClient} from '@supabase/supabase-js';
 import {configFrom,publicConfig} from './lib/config.mjs';
 import {PhotoError,normalizePhoto,readLimited,validId,MAX_FILE} from './lib/photos.mjs';
 const root=fileURLToPath(new URL('./dist',import.meta.url));
@@ -18,6 +18,7 @@ export function createServer(config){
   const send=(status,body)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(body));};
   try{
    const url=new URL(req.url,config.origin);
+   if(url.pathname==='/api/health'&&req.method==='GET')return send(200,{status:'ok'});
    if(url.pathname==='/api/config'&&req.method==='GET')return send(200,publicConfig(config));
    if(url.pathname==='/api/photos'&&req.method==='POST'){
     if(!admin)return send(503,{error:'PHOTOS_NOT_CONFIGURED'});
@@ -64,7 +65,7 @@ export function createServer(config){
  });
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- try{const config=configFrom(process.env);const server=createServer(config);server.requestTimeout=30000;server.headersTimeout=15000;server.listen(config.port,'127.0.0.1',()=>console.log('Paco: '+config.origin+' — '+(config.ready?'Supabase configurado':'Pendiente de configuración')));}
+ try{const config=configFrom(process.env);const server=createServer(config);server.requestTimeout=30000;server.headersTimeout=15000;server.listen(config.port,config.host,()=>console.log('Paco: '+config.origin+' — '+(config.ready?'Supabase configurado':'Pendiente de configuración')));}
  catch{console.error('Configuración inválida. Revisa .env y CONFIGURAR.md.');process.exitCode=1;}
 }
 

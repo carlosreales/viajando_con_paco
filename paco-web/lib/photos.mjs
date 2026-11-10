@@ -1,4 +1,4 @@
-import sharp from 'file:///C:/Users/Carlos%20Reales/Documents/Codex/2026-09-13/qu/outputs/Paco/real/node_modules/.pnpm/sharp@0.34.5/node_modules/sharp/lib/index.js';
+import sharp from 'sharp';
 export const MAX_FILE=8*1024*1024;
 export class PhotoError extends Error{constructor(code,status=400){super(code);this.code=code;this.status=status;}}
 export async function normalizePhoto(bytes){
