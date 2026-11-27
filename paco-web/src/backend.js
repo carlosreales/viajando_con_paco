@@ -1,3 +1,7 @@
+export function isUnauthenticated(error){
+ const text=String(error?.message||error?.error||'');
+ return error?.status===401||text.includes('UNAUTHENTICATED');
+}
 export function message(error){
  const text=String(error?.message||error?.error||'');
  if(text.includes('PACO_PET_LIMIT'))return 'Esta beta admite dos mascotas por cuenta.';
@@ -9,9 +13,19 @@ export function message(error){
  if(text.includes('PHOTO_TOO_LARGE'))return 'La fotografía supera los 8 MB.';
  if(text.includes('PHOTO_FORMAT')||text.includes('PHOTO_INVALID'))return 'Usa una fotografía JPEG, PNG o WebP válida, sin animación.';
  if(text.includes('PHOTOS_NOT_CONFIGURED'))return 'Falta configurar el servicio privado de fotografías.';
+ if(text.includes('ORIGIN_NOT_ALLOWED'))return 'Esta carga debe hacerse desde la dirección oficial de Pawco. Actualiza la página e inténtalo de nuevo.';
+ if(text.includes('PHOTO_UPLOAD_FAILED'))return 'No pudimos guardar la foto privada. Conserva tu imagen y vuelve a intentarlo en un momento.';
+ if(text.includes('PHOTO_LINK_FAILED'))return 'La foto se procesó, pero no pudimos asociarla a su perfil. No se guardó ningún cambio; inténtalo de nuevo.';
+ if(text.includes('NOT_FOUND'))return 'No encontramos este perfil. Actualiza la página e inténtalo de nuevo.';
  if(text.includes('TRY_LATER'))return 'Hay varias cargas en curso. Espera un momento y vuelve a intentarlo.';
- if(text.includes('UNAUTHENTICATED')||error?.status===401)return 'Tu sesión ha caducado. Vuelve a iniciar sesión.';
+ if(isUnauthenticated(error))return 'Tu sesión ha caducado. Vuelve a iniciar sesión.';
  return 'No se pudo completar la operación. Revisa tu conexión e inténtalo de nuevo.';
+}
+async function responseData(response){
+ try{return await response.json();}catch{return {error:'SERVER_ERROR'};}
+}
+function uploadError(response,result){
+ const error=Error(result?.error||'SERVER_ERROR');error.status=response.status;return error;
 }
 function checked(result){if(result.error)throw result.error;return result.data;}
 function authRedirect(config){return config.authRedirectTo||config.origin;}
@@ -62,8 +76,9 @@ export function createBackend(config,injected,createClient){
    const {data}=await client.auth.getSession();
    if(!data.session)throw Error('UNAUTHENTICATED');
    const response=await fetch('/api/photos?kind='+kind+'&id='+encodeURIComponent(id),{method:'POST',headers:{Authorization:'Bearer '+data.session.access_token,'Content-Type':'application/octet-stream'},body:file});
-   const result=await response.json();if(!response.ok)throw Error(result.error);return result;
+   const result=await responseData(response);if(!response.ok)throw uploadError(response,result);return result;
   }
  };
 }
+
 
