@@ -1,4 +1,4 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {createBackend} from '../src/backend.js';
+import {test} from 'node:test';import assert from 'node:assert/strict';import {createBackend,isUnauthenticated,message} from '../src/backend.js';
 test('Auth calls provider; verification scopes recovery and signup; reset signs out globally',async()=>{
  const calls=[];const auth={};
  for(const method of ['signInWithPassword','signUp','verifyOtp','resetPasswordForEmail','updateUser','signOut','resend']){
@@ -28,4 +28,18 @@ test('Authentication emails return to the verified browser origin when it is sup
  assert.equal(calls[1][2].redirectTo,'https://viajandoconpaco.com');
  assert.equal(calls[2][2].redirectTo,'https://viajandoconpaco.com');
 });
+test('Photo upload preserves server status and makes expired sessions actionable',async()=>{
+ const auth={getSession:async()=>({data:{session:{access_token:'token'}}})};
+ const api=createBackend({}, {auth});const originalFetch=globalThis.fetch;
+ globalThis.fetch=async()=>({ok:false,status:401,json:async()=>({error:'UNAUTHENTICATED'})});
+ try{
+  await assert.rejects(api.upload('pet','123e4567-e89b-12d3-a456-426614174000',new Blob(['photo'])),error=>{
+   assert.equal(error.status,401);assert.equal(error.message,'UNAUTHENTICATED');assert.equal(isUnauthenticated(error),true);return true;
+  });
+ }finally{globalThis.fetch=originalFetch;}
+ assert.equal(message({status:401}),'Tu sesión ha caducado. Vuelve a iniciar sesión.');
+ assert.match(message(Error('PHOTO_UPLOAD_FAILED')),/No pudimos guardar la foto privada/);
+ assert.match(message(Error('ORIGIN_NOT_ALLOWED')),/dirección oficial de Pawco/);
+});
+
 
