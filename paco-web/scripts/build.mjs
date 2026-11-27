@@ -38,7 +38,7 @@ const workspaceFiles={name:'workspace-files',setup(builder){
 await mkdir(path.join(root,'dist'),{recursive:true});
 await mkdir(path.join(root,'dist','fonts'),{recursive:true});
 await build({entryPoints:[path.join(root,'src','app.js')],plugins:[workspaceFiles],bundle:true,format:'esm',outfile:path.join(root,'dist','app.js'),platform:'browser',target:['es2022'],minify:true});
-for(const file of ['index.html','style.css','dog.svg','paco-mark.svg'])await copyFile(path.join(root,'src',file),path.join(root,'dist',file));
+for(const file of ['index.html','style.css','dog.svg','paco-mark.svg','manifest.webmanifest','register-sw.js','sw.js'])await copyFile(path.join(root,'src',file),path.join(root,'dist',file));
 for(const weight of ['400','500','600','700'])await copyFile(path.join(root,'src','fonts','bricolage-grotesque-'+weight+'.ttf'),path.join(root,'dist','fonts','bricolage-grotesque-'+weight+'.ttf'));
 console.log('Paco build OK');
 
