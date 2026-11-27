@@ -33,3 +33,30 @@ h1,h2,h3,h4,.page-title,.pet-details h2,.story-copy h2,.timeline h2,.vaccine-car
 .product-header{border-bottom-color:#dbe7f0}.demo-badge{font-weight:600}.bottom-nav{padding:7px;border-radius:16px;box-shadow:0 12px 30px #173c6b1c}.bottom-nav button{font-family:'Bricolage Grotesque',Arial,sans-serif;font-weight:500;font-size:10px}.bottom-nav button span{font-size:21px}.journal-invite{border:1px solid #f3df8f;border-radius:14px}.vaccine-card{border-radius:14px}.vaccine-alert{border:1px solid #f0d77d;border-radius:14px}.info-note{border-radius:12px}.private-pill{font-size:10px;letter-spacing:.04em}.age-chip{font-weight:500}.fine{font-size:12px}.product-main .text-button{font-weight:500}
 @media(max-width:700px){.page-title{font-size:38px}.product-main h2{font-size:34px}.optional-details,.photo-details{margin:18px 0}.welcome-benefits{font-size:13px;margin-bottom:24px}.primary,.secondary{font-size:15px}.bottom-nav{bottom:18px}.product-main{margin-bottom:130px}}
 
+/* Flujo de fotos y presentación móvil tipo aplicación. */
+html{min-height:100%;background:var(--neutral-100);-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+body{min-height:100%;overscroll-behavior-y:none}
+.photo-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.photo-form{display:grid;gap:12px;padding:12px 0 2px}
+.photo-picker{display:flex;align-items:center;gap:12px;min-height:64px;padding:11px 13px;border:1px solid #b8d7ee;border-radius:14px;background:#fff;cursor:pointer;color:var(--collar);transition:transform .16s ease,background .16s ease,border-color .16s ease}
+.photo-picker:hover{background:#f4faff;border-color:var(--collar)}
+.photo-picker:active{transform:scale(.985)}
+.photo-picker-icon{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:11px;background:var(--burbuja);font-size:21px;line-height:1;color:var(--collar)}
+.photo-picker span:last-child{display:grid;gap:3px;min-width:0}.photo-picker b{font-size:14px;font-weight:600}.photo-picker small{font-size:11px;color:#55718a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-preview{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px;border:1px solid #d6e4ef;border-radius:14px;background:#fff}
+.photo-preview img{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--burbuja)}
+.photo-file-name{font-size:12px;line-height:1.35;overflow-wrap:anywhere;color:var(--neutral-900)}
+.photo-clear{min-height:42px;padding:8px 10px;border-radius:10px;background:#edf6fc;color:var(--collar);font-size:12px;font-weight:600}
+.photo-submit{width:100%;margin:0!important}.photo-submit:disabled{opacity:.55;cursor:not-allowed}.photo-form .photo-status{min-height:18px;margin:0;font-size:12px}.photo-form[aria-busy=true] .photo-picker{opacity:.6;pointer-events:none}.photo-form[aria-busy=true] .photo-submit:after{content:' · Guardando…'}
+@media(max-width:700px){
+ body{padding-top:env(safe-area-inset-top)}
+ input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px}
+ .product-shell{padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right));min-height:100dvh}
+ .product-header{position:sticky;top:0;z-index:3;height:66px;margin:0 -18px;padding:0 18px;background:#f6f4f2eF;backdrop-filter:blur(16px);border-bottom:1px solid #dbe7f0}
+ .product-main{margin-top:24px;margin-bottom:calc(122px + env(safe-area-inset-bottom))}
+ .pet-hero{border-radius:20px}.stats{padding:22px 0}.stats strong{font-size:23px}.stats span{font-size:10px}
+ .photo-details{padding:0 12px;border-radius:16px;background:#fff;box-shadow:0 8px 22px #1d50810d}.photo-details summary{padding:16px 2px}.photo-details .photo-form{margin:0 0 14px;background:transparent}
+ .bottom-nav{bottom:max(12px,env(safe-area-inset-bottom));width:calc(100% - 24px);border-radius:18px;padding:6px;box-shadow:0 12px 34px #173c6b24}.bottom-nav button{min-height:52px;font-size:10px}.bottom-nav button span{font-size:20px}
+ .primary,.secondary{min-height:50px;border-radius:14px}.photo-picker{min-height:62px}.photo-preview{grid-template-columns:50px minmax(0,1fr) auto}.photo-preview img{width:50px;height:50px}
+}
+
