@@ -1,4 +1,4 @@
-import {createBackend,message} from './backend.js';
+import {createBackend,isUnauthenticated,message} from './backend.js';
 import {petError,today,ageLabel,vaccineError,vaccineReminder,escapeHtml as esc} from './domain.js';
 import {BREED_OTHER,breedsForSpecies} from './breeds.js';
 const app=document.querySelector('#app');
@@ -43,7 +43,7 @@ function breedField(species,current=''){
  const listed=breeds.includes(current),choice=listed?current:(current?BREED_OTHER:'');
  return '<label class="field"><span>Raza (opcional)</span><select name="breed"><option value="">Selecciona una raza</option>'+breeds.map(b=>'<option value="'+esc(b)+'" '+(choice===b?'selected':'')+'>'+esc(b)+'</option>').join('')+'<option value="'+BREED_OTHER+'" '+(choice===BREED_OTHER?'selected':'')+'>Otra raza (escribir manualmente)</option></select></label><label class="field" data-custom-breed '+(choice===BREED_OTHER?'':'hidden')+'><span>Escribe la raza</span><input name="customBreed" type="text" value="'+esc(choice===BREED_OTHER?current:'')+'" maxlength="80" '+(choice===BREED_OTHER?'required':'')+'></label><p class="fine">Catálogo internacional · También puedes registrar cruces o razas no listadas.</p>';
 }
-function photoForm(kind,id,label){return '<form class="photo-form" data-kind="'+kind+'" data-id="'+id+'"><label class="field"><span>'+label+'</span><input aria-label="'+label+'" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required '+(!config.photosEnabled?'disabled':'')+'></label><button class="secondary" type="submit" '+(!config.photosEnabled?'disabled':'')+'>Guardar foto</button><p class="fine">JPEG, PNG o WebP · Máximo 8 MB · Foto privada</p><p class="photo-status notice" role="status">'+(!config.photosEnabled?'Falta configurar el servicio de fotografías.':'')+'</p></form>';}
+function photoForm(kind,id,label){const inputId='photo-'+kind+'-'+id;return '<form class="photo-form" data-kind="'+kind+'" data-id="'+id+'"><input class="photo-input" id="'+inputId+'" aria-label="'+label+'" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required '+(!config.photosEnabled?'disabled':'')+'><label class="photo-picker" for="'+inputId+'"><span class="photo-picker-icon" aria-hidden="true">＋</span><span><b>Elegir foto</b><small>JPEG, PNG o WebP · Máximo 8 MB</small></span></label><div class="photo-preview" hidden><img alt="Vista previa de la foto elegida"><span class="photo-file-name"></span><button class="photo-clear" type="button" data-action="clear-photo">Cambiar</button></div><button class="primary photo-submit" type="submit" disabled '+(!config.photosEnabled?'disabled':'')+'>Guardar foto</button><p class="photo-status notice" role="status">'+(!config.photosEnabled?'Falta configurar el servicio de fotografías.':'')+'</p></form>';}
 function home(){
  const p=state.pet;
  const due=state.vaccinations.find(v=>['OVERDUE','DUE'].includes(vaccineReminder(v.next_due_on).kind));
@@ -109,7 +109,10 @@ app.addEventListener('submit',event=>{
   if(form.classList.contains('photo-form')){
    const status=form.querySelector('.photo-status');status.textContent='Procesando y guardando foto…';
    try{await api.upload(form.dataset.kind,form.dataset.id,data.get('photo'));await load();state.notice='Fotografía guardada.';render();}
-   catch(e){status.textContent=message(e);status.setAttribute('role','alert');}
+   catch(e){
+    if(isUnauthenticated(e)){clearPrivate();go('login');state.notice='Tu sesión terminó por seguridad. Inicia sesión para continuar.';render();return;}
+    status.textContent=message(e);status.setAttribute('role','alert');
+   }
    return;
   }
   const email=String(data.get('email')||'').trim().toLowerCase();
@@ -145,6 +148,7 @@ app.addEventListener('click',event=>{
  busy(null,async()=>{
   switch(b.dataset.action){
    case 'reload':location.reload();break;
+   case 'clear-photo':{const form=b.closest('.photo-form');if(form)clearPhoto(form);break;}
    case 'refresh':await load();break;
    case 'logout':await api.logout();clearPrivate();go('login');break;
    case 'resend':if(Date.now()-state.lastSend<60000){showError(null,'Espera un minuto antes de solicitar otro código.');return;}await api.resend(state.email,state.purpose);state.lastSend=Date.now();state.notice='Si la solicitud procede, recibirás un nuevo código.';state.error='';render();break;
@@ -170,8 +174,24 @@ app.addEventListener('click',event=>{
   }
  });
 });
+function photoSize(file){return file.size<1024*1024?Math.max(1,Math.round(file.size/1024))+' KB':(file.size/(1024*1024)).toFixed(1)+' MB';}
+function clearPhoto(form){
+ const input=form.querySelector('.photo-input'),preview=form.querySelector('.photo-preview'),image=preview.querySelector('img'),name=form.querySelector('.photo-file-name'),submitButton=form.querySelector('.photo-submit'),status=form.querySelector('.photo-status');
+ if(image.dataset.objectUrl)URL.revokeObjectURL(image.dataset.objectUrl);
+ image.removeAttribute('src');delete image.dataset.objectUrl;input.value='';preview.hidden=true;name.textContent='';submitButton.disabled=true;if(config.photosEnabled)status.textContent='';
+}
+function previewPhoto(input){
+ const form=input.closest('.photo-form'),file=input.files?.[0];if(!form)return;
+ if(!file){clearPhoto(form);return;}
+ const status=form.querySelector('.photo-status'),submitButton=form.querySelector('.photo-submit');
+ if(file.size>8388608){clearPhoto(form);status.textContent='La fotografía supera los 8 MB. Elige otra imagen.';status.setAttribute('role','alert');return;}
+ const preview=form.querySelector('.photo-preview'),image=preview.querySelector('img'),name=form.querySelector('.photo-file-name');
+ if(image.dataset.objectUrl)URL.revokeObjectURL(image.dataset.objectUrl);
+ const objectUrl=URL.createObjectURL(file);image.src=objectUrl;image.dataset.objectUrl=objectUrl;name.textContent=file.name+' · '+photoSize(file);preview.hidden=false;submitButton.disabled=false;status.textContent='Lista para guardar de forma privada.';status.removeAttribute('role');
+}
 app.addEventListener('change',event=>{
  if(event.target.id==='pet-selector'){const id=event.target.value;busy(null,async()=>{state.pet=state.pets.find(p=>p.id===id);await loadPet();});return;}
+ if(event.target.name==='photo'){previewPhoto(event.target);return;}
  if(event.target.name==='species'){document.querySelector('#breed-field').innerHTML=breedField(event.target.value);return;}
  if(event.target.name==='breed'){
   const custom=document.querySelector('[data-custom-breed]');if(!custom)return;
